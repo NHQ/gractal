@@ -18,13 +18,13 @@ var mavs = []
 module.exports = history
 
 function history(cb){
-    bter.getHistory({ CURR_A: 'xcp', CURR_B: 'btc' }, function(err, result) {
+    bter.getHistory({ CURR_A: t1, CURR_B: t2 }, function(err, result) {
     if(err) console.log(err);
     else{
       var data = dedupe(result.data, function(val){return val.tid})
       mavs.concat(result.data)
       
-      var l = result.data.length / 4
+      var l = 0//result.data.length / 4
       ma80 = result.data.slice(Math.floor(l)).reduce(function(p,e,i){
         h80 = Math.max(h80, e.price)
         l80 = Math.min(l80, e.price)

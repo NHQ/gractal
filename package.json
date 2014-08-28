@@ -10,7 +10,9 @@
   "license": "ISC",
   "dependencies": {
     "bter": "0.0.6",
+    "closeness": "^1.0.0",
     "cryptofetch": "^0.1.1",
-    "dedupe": "^0.2.8"
+    "dedupe": "^0.2.8",
+    "minimist": "^1.1.0"
   }
 }

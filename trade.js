@@ -1,10 +1,13 @@
 var fs = require('fs')
 
 var bter = require('bter')
+var closeness = require('closeness')
 var key = fs.readFileSync('./bter.key', 'utf8').trim()
 var secret = fs.readFileSync('./bter.secret', 'utf8').trim()
 
+
 var orders = {}
+var history = {}
 
 var trade = {}
 trade.API_KEY = key
@@ -15,21 +18,31 @@ var CHECKER = new Object(trade)
 
 BUYER.TYPE = 'BUY'
 SELLER.TYPE = 'SELL'
-BUYER.PAIR = SELLER.PAIR = 'xcp_btc'
+var t1 = global.t1
+var t2 = global.t2
 
+var T1 = t1.toUpperCase()
+var T2 = t2.toUpperCase()
+
+BUYER.PAIR = SELLER.PAIR = t1+'_'+t2
 var funds, escrow;
 var gr = 1 / 1.62
 
-module.exports = function(mData){
-  console.log(mData)
+var tData
+var mData
+
+module.exports = function(mData, tData){
+  mData = mData, tData = tData
   getOrderList(function(err, data){
-    console.log(orders)
+
     if(!err){
       prune(function(){
         setTimeout(function(){
           getFunds(function(err, data){
-            console.log('**BALANCE***', data) //  current balances
             fract(mData)
+            console.log('***hiBuy***', tData.hiBuy) //  current balances
+            console.log('**lowSell**', tData.lowSell) //  current balances
+            console.log('***ma80***', mData[2]) //  current balances
           })
         }, 30)
       })      
@@ -47,27 +60,28 @@ function fract(mData){
   var lDiff = ma - l
   var grH = hDiff * gr // the differentials are high/farthest
   var grL = lDiff * gr // so price and amount accordingly
-
-  if(funds['XCP'] >= .1){
-    var askPrice = h - grH
+  var beatIT = closeness(ma, .0001)
+  
+  if(funds[T1] >= .01){
+    var askPrice = Math.max(h, ma)
     var aa = 0;
-    funds['XCP'] -= (aa = funds['XCP'] * gr)
+    funds[T1] -= (aa = funds[T1] * gr * gr)
     var askAmount = aa
     sell({RATE: askPrice, AMOUNT: askAmount}, console.log)
     console.log('ASK', askPrice, askAmount)
   }  
   
-  if(funds['BTC'] >= .00075){
-    var bidPrice = ma - grL
+  if(funds[T2] >= .00075){
+    var bidPrice = Math.min(l, ma) 
     var ff = 0;
-    funds['BTC'] -= (ff = (funds['BTC'] * gr) + .00001)
+    funds[T2] -= (ff = (funds[T2] * gr * gr) + .00001)
     var bidAmount = ff / bidPrice
     buy({RATE: bidPrice, AMOUNT: bidAmount}, console.log)
     console.log('BID', bidPrice, bidAmount)
   }
   
-  if(funds['XCP'] >= .1 + aa || funds['BTC'] >= .00075 + ff){
-    fract([h * 92, l * 1.1, ma * 1.0051, last])
+  if(funds[T1] >= .01 || funds[T2] >= .00075 ){
+    fract([h * .995 , l * 1.005, ma * 1.0051, last])
   }  
 
 }
@@ -93,10 +107,14 @@ function prune(cb){
   var now = new Date().getTime()
   var flag = 0
   for(var i in orders){
-    if(orders[i].status !== 'open') delete orders[i]
+    if(orders[i].status !== 'open') {
+      history[i] = orders[i]     
+      delete orders[i]
+      console.log(history)
+    }
     else if(!orders[i]){}
     else{
-      if(now - orders[i].time > 1000 * 60){
+      if(false && now - orders[i].time > 1000 * 60 * 11){
         ++flag
         cancel(orders[i].id, orders[i].oid, function(err, res){
           if(!err) {
@@ -202,7 +220,8 @@ function getOrderList(cb){
           orders[e.id] = e
         }
       })
-
+  
+      console.log('**ORDERS***', orders) //  current balances
       if(cb) cb(null, orders)
     
     }
